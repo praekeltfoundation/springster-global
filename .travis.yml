@@ -1,0 +1,41 @@
+sudo: false  # Force container-based builds.
+language: python
+
+jobs:
+  include:
+    - stage: docker
+      python: "3.6"
+      sudo: required
+      dist: trusty
+      services: [docker]
+      env:
+        - IMAGE_NAME=praekeltfoundation/springster-global
+        - REGISTRY_USER=praekeltorgdeploy
+        - secure: "P2xmOQ7IWiHYbhvMueWe5UVxnQbQAHtRHY3As5h9U95WzqWHfH9a9wB065xKyc5wkKJ2t86/ZZ4zUKOUp54n8/c5cnD/Y/OzgiPRpMygDKUMoHyooa25R7yGYvu6gLh3STdi3kW+M7HWZ7wbUgItYNE3MPKKg9Pq+ub5soU7Duk87DQfm+cb0gC4iwQdQLdkP2YoF2vcNGeKSemwjAX8YG6SUBCH4JcR2UtMzE1l73Ph3+dXimrrQFz/k8pQ5zDvHPdJnbGyxblhowJk59LTIan1UZ7ELb8XyZp2SWK/A3q4A3v/D0bpDahqukXTYWNtJeKDNE0IECww0y/NTtpv0GwKvebOTB5DIhNutbQJdMRRfiI8mCXy6mvotHT9f+uM8ob4r+zEQG8PyksMSL6v1zKy1BWIZX9RJB+oo3FXEaxQT5J+iWW3UmAcPScTO520M4t32x8glQgropya0+YVD0rnqwuCKm++HC5+4b3ztx3YUBguUwM2oE4UX9V4Fn9cbZq4fuJURkn6lyZeHWlV9K4VdPDItCcxhpGdhCCCFoHOal62jXbGQpH3EMvywcdcfOID1SoBCL2oq2lj1f2QlilPHLO9d/w6wunDZ1cOpTR/MS/ie3BkWDXscRdGdgr3C4nZImWBCYov3nbT04j0zuFnQYcxwmJTEjpLAko7dA8="
+
+      # Update Docker: we want some new docker build features
+      install:
+        - sudo apt-get update
+        - sudo apt-get install -y -o Dpkg::Options::="--force-confold" docker-ce
+
+      before_script:
+        - docker pull "$IMAGE_NAME" || true
+      script:
+        - docker build --pull --tag "$IMAGE_NAME" .
+
+      before_deploy:
+        - pip install docker-ci-deploy==0.3.0
+        - echo -n $REGISTRY_PASS | docker login -u "$REGISTRY_USER" --password-stdin
+      deploy:
+        - provider: script
+          script: dcd --version "$(git rev-parse --short HEAD)" --version-latest "$IMAGE_NAME"
+          on:
+            branch: develop
+        - provider: script
+          script: dcd --tag "$TRAVIS_TAG" -- "$IMAGE_NAME"
+          on:
+            tags: true
+
+      # Built steps inherited from the default stage that we don't want
+      before_install: ignore
+      after_success: []
