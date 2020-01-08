@@ -30,7 +30,7 @@ jobs:
         - provider: script
           script: dcd --version "$(git rev-parse --short HEAD)" --version-latest "$IMAGE_NAME"
           on:
-            branch: develop
+            branch: master
         - provider: script
           script: dcd --tag "$TRAVIS_TAG" -- "$IMAGE_NAME"
           on:
